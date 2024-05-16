@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ads Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .user-card {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100">
+    <div class="container mx-auto mt-5 px-4">
+        <h1 class="text-3xl font-bold mb-8 text-center">Ads Board</h1>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-bold mb-4">Active Ads</h2>
+                <ul id="activeAds" class="list-disc list-inside"></ul>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-bold mb-4">Closed Ads</h2>
+                <ul id="closedAds" class="list-disc list-inside"></ul>
+            </div>
+        </div>
+        <div class="mt-8">
+            <h2 class="text-2xl font-bold mb-4">Active Users</h2>
+            <div id="activeUsers"></div>
+        </div>
+        <div class="mt-8">
+            <h2 class="text-2xl font-bold mb-4">Create New Ad</h2>
+            <form id="newAdForm" class="bg-white p-6 rounded-lg shadow-md">
+                <div class="mb-4">
+                    <label for="duration" class="block text-sm font-medium text-gray-700">Duration (seconds):</label>
+                    <input type="number" class="form-input mt-1 block w-full" id="duration" name="duration" required>
+                </div>
+                <div class="mb-4">
+                    <label for="minBid" class="block text-sm font-medium text-gray-700">Minimum Bid:</label>
+                    <input type="number" class="form-input mt-1 block w-full" id="min_bid" name="min_bid" required>
+                </div>
+                <button type="submit"
+                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Create Ad</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Function to fetch ads from the server
+        function fetchAds(status, callback) {
+            fetch(`http://localhost:8080/ads/?status=${status}`)
+                .then(response => response.json())
+                // .then(data => console.log(data))
+                .then(data => callback(data))
+                .catch(error => console.error('Error fetching ads:', error));
+        }
+
+        // Function to fetch active users from the server
+        function fetchActiveUsers(callback) {
+            fetch('http://localhost:8080/users')
+                .then(response => response.json())
+                // .then(data => console.log(data))
+                .then(data => callback(data.users))
+                .catch(error => console.error('Error fetching active users:', error));
+        }
+
+        // Function to render ads
+        function renderAdsActive(ads, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = ''; // Clear existing content
+
+            // sort ads by creation time in descending order
+            ads.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            ads.forEach(ad => {
+                const listItem = document.createElement('li');
+                listItem.className = 'mt-2';
+
+                // Calculate countdown
+                const creationTime = new Date(ad.created_at);
+                const currentTime = new Date();
+                const countdown = ad.duration - Math.round((currentTime - creationTime) / 1000); // Countdown in seconds
+
+                // Update text content with countdown
+                listItem.textContent = `ID: ${ad.id}, Duration: ${ad.duration}, Current Bid: ${ad.current_bid}, Sec Left: ${countdown}s`;
+                container.appendChild(listItem);
+            });
+        }
+
+
+        // Function to render ads
+        function renderAds(ads, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = ''; // Clear existing content
+            console.log(ads);
+            // sort ads by id in reverse order
+            console.log(ads);
+            ads.sort((a, b) => b.current_bid - a.current_bid);
+            console.log(ads);
+            ads.forEach(ad => {
+                const listItem = document.createElement('li');
+                listItem.className = 'mt-2';
+                listItem.textContent = `ID: ${ad.id}, Duration: ${ad.duration}, Current Bid: ${ad.current_bid}, Winner: ${ad.current_user}, Bids Made: ${ad.num_bids}`;
+                container.appendChild(listItem);
+            });
+        }
+
+
+
+        // Function to render active users
+        function renderActiveUsers(users) {
+            const userList = document.getElementById('activeUsers');
+            userList.innerHTML = '';
+            console.log(users);
+
+            if (users === undefined) {
+                const listItem = document.createElement('li');
+                listItem.className = 'mt-2';
+                listItem.textContent = 'No active users';
+                userList.appendChild(listItem);
+                return;
+            } else {
+                // sort users by user_id
+                users.sort((a, b) => b.bids_won.length - a.bids_won.length);
+                users.forEach(user => {
+                    if (user.user_id !== "") {
+
+                        const listItem = document.createElement('li');
+                        listItem.className = 'mt-2';
+                        listItem.textContent = `User ID: ${user.user_id}, Bids Won: ${user.bids_won.join(', ')}`;
+                        userList.appendChild(listItem);
+                    }
+                });
+            }
+        }
+
+        // Function to fetch and render active ads
+        function fetchAndRenderActiveAds() {
+            fetchAds(1, ads => renderAdsActive(ads.ads, 'activeAds'));
+        }
+
+        // Initially fetch and render active ads
+        fetchAndRenderActiveAds();
+
+        // Set interval to fetch and render active ads every 500 milliseconds
+        setInterval(fetchAndRenderActiveAds, 1000);
+
+        // Fetch and render closed ads
+        function fetchAndRenderClosedAds() {
+            fetchAds(2, ads => renderAds(ads.ads, 'closedAds'));
+        }
+
+        // Initially fetch and render closed ads
+        fetchAndRenderClosedAds();
+
+        // Set interval to fetch and render closed ads every 500 milliseconds
+        setInterval(fetchAndRenderClosedAds, 1000);
+
+        // Fetch and render active users
+        fetchActiveUsers(renderActiveUsers);
+
+
+        function fetchAndRenderActiveUsers() {
+            fetchActiveUsers(renderActiveUsers);
+        }
+
+        setInterval(fetchAndRenderActiveUsers, 1000);
+
+        // Function to handle form submission
+        document.getElementById('newAdForm').addEventListener('submit', function (event) {
+            event.preventDefault(); // Prevent default form submission
+
+            // Get form data
+            const formData = new FormData(this);
+
+            // Create object from form data
+            const newAdData = {};
+            formData.forEach((value, key) => {
+                newAdData[key] = parseInt(value);
+            });
+
+            // Send new ad data to server
+            fetch('http://localhost:8080/ads/new', {
+                method: 'POST',
+                body: JSON.stringify(newAdData),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    // Refresh active ads list after creating a new ad
+                    fetchAds(0, ads => renderAds(ads.ads, 'activeAds'));
+                })
+                .catch(error => console.error('Error creating new ad:', error));
+            this.reset(); // Reset form fields
+        });
+    </script>
+</body>
+
+</html>

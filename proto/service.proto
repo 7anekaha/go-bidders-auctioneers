@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+option go_package = "./proto";
+
+
+message UserRequest {
+    string name = 1;
+}
+
+message UserResponse {
+    string userID = 1;
+}
+
+message AdRequest {
+    string adID = 1;
+    int64 startTimestamp = 2;
+    int64 duration = 3;
+    int64 amount = 4;
+}
+
+message AdResponse {
+    string userID = 1;
+    string adID = 2;
+    int64 amount = 3;
+}
+
+enum Status {
+    CREATED = 0;
+    OPEN = 1;
+    CLOSED = 2;
+}
+
+enum Error {
+    NO_ERROR = 0;
+    CLIENT_NOT_FOUND = 1;
+    AD_NOT_FOUND = 2;
+    AD_CLOSED = 3;
+}
+
+message AdStatus{
+    string adID = 1;
+    string bidID = 2; // client bid
+    Status status = 3;
+    int64 amount = 4;
+    string userID = 5; //client that is winning the bid
+    int64 timeLeft = 6;
+    Error error = 7; //error code
+
+
+}
+
+message Void {}
+
+service AdService {
+    rpc Connect(UserRequest) returns (UserResponse);
+    rpc ListenRequests(UserResponse) returns (stream AdRequest);
+    rpc Bid(AdResponse) returns (AdStatus);    
+}
